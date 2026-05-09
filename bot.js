@@ -34,21 +34,47 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
 
     try {
 
-        // Create auth folder
+        // Create auth state
         const { state, saveCreds } =
             await useMultiFileAuthState(
                 `sessions/${phone}`
             )
 
-        // Create WhatsApp socket
+        // Create socket
         const sock = makeWASocket({
             auth: state,
             logger: P({ level: 'silent' }),
-            browser: ['Railway', 'Chrome', '1.0.0']
+            browser: ['Ubuntu', 'Chrome', '20.0.04'],
+            printQRInTerminal: false,
+            markOnlineOnConnect: false,
+            syncFullHistory: false
         })
 
         // Save credentials
         sock.ev.on('creds.update', saveCreds)
+
+        // Connection logs
+        sock.ev.on('connection.update', (update) => {
+
+            const { connection } = update
+
+            console.log(update)
+
+            if (connection === 'close') {
+
+                console.log('Connection Closed')
+            }
+
+            if (connection === 'open') {
+
+                console.log('Connected Successfully')
+            }
+        })
+
+        // Wait before generating pairing code
+        await new Promise(resolve =>
+            setTimeout(resolve, 5000)
+        )
 
         // Generate pairing code
         const code =
@@ -60,6 +86,8 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
         )
 
     } catch (err) {
+
+        console.log(err)
 
         bot.sendMessage(
             chatId,
