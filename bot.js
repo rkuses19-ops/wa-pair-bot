@@ -6,7 +6,7 @@ const {
 
 const P = require('pino')
 
-const TOKEN = 'PASTE_YOUR_BOT_TOKEN'
+const TOKEN = '8544016348:AAHRVh8HiInIrxTn31ZTmEjA8PTvhxFkPjc'
 
 const bot = new TelegramBot(TOKEN, {
     polling: true
