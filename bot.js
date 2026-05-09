@@ -2,12 +2,15 @@ const TelegramBot = require('node-telegram-bot-api')
 
 const {
     default: makeWASocket,
-    useMultiFileAuthState
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
+    DisconnectReason
 } = require('@whiskeysockets/baileys')
 
 const P = require('pino')
 
-const TOKEN = '8544016348:AAHRVh8HiInIrxTn31ZTmEjA8PTvhxFkPjc'
+const TOKEN =
+'8544016348:AAHRVh8HiInIrxTn31ZTmEjA8PTvhxFkPjc'
 
 const bot = new TelegramBot(TOKEN, {
     polling: true
@@ -34,51 +37,89 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
 
     try {
 
-        // Create auth state
+        const { version } =
+            await fetchLatestBaileysVersion()
+
         const { state, saveCreds } =
             await useMultiFileAuthState(
                 `sessions/${phone}`
             )
 
-        // Create socket
         const sock = makeWASocket({
+
+            version,
+
             auth: state,
-            logger: P({ level: 'silent' }),
-            browser: ['Ubuntu', 'Chrome', '20.0.04'],
+
+            logger: P({
+                level: 'silent'
+            }),
+
+            browser: [
+                'Ubuntu',
+                'Chrome',
+                '20.0.04'
+            ],
+
             printQRInTerminal: false,
+
             markOnlineOnConnect: false,
-            syncFullHistory: false
+
+            syncFullHistory: false,
+
+            connectTimeoutMs: 60000,
+
+            defaultQueryTimeoutMs: 60000,
+
+            keepAliveIntervalMs: 10000
         })
 
-        // Save credentials
-        sock.ev.on('creds.update', saveCreds)
-
-        // Connection logs
-        sock.ev.on('connection.update', (update) => {
-
-            const { connection } = update
-
-            console.log(update)
-
-            if (connection === 'close') {
-
-                console.log('Connection Closed')
-            }
-
-            if (connection === 'open') {
-
-                console.log('Connected Successfully')
-            }
-        })
-
-        // Wait before generating pairing code
-        await new Promise(resolve =>
-            setTimeout(resolve, 5000)
+        sock.ev.on(
+            'creds.update',
+            saveCreds
         )
 
-        // Generate pairing code
+        sock.ev.on(
+            'connection.update',
+            async (update) => {
+
+                const {
+                    connection,
+                    lastDisconnect
+                } = update
+
+                console.log(update)
+
+                if (connection === 'open') {
+
+                    console.log(
+                        'WhatsApp Connected'
+                    )
+                }
+
+                if (connection === 'close') {
+
+                    const reason =
+                        lastDisconnect?.error
+                            ?.output?.statusCode
+
+                    console.log(
+                        'Connection Closed:',
+                        reason
+                    )
+                }
+            }
+        )
+
+        // wait before requesting pair code
+        await new Promise(resolve =>
+            setTimeout(resolve, 8000)
+        )
+
         const code =
-            await sock.requestPairingCode(phone)
+            await sock.requestPairingCode(
+                phone
+            )
 
         bot.sendMessage(
             chatId,
