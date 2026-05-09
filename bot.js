@@ -1,7 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api')
 
 const {
-    default: makeWASocket
+    default: makeWASocket,
+    useMultiFileAuthState
 } = require('@whiskeysockets/baileys')
 
 const P = require('pino')
@@ -33,11 +34,23 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
 
     try {
 
+        // Create auth folder
+        const { state, saveCreds } =
+            await useMultiFileAuthState(
+                `sessions/${phone}`
+            )
+
+        // Create WhatsApp socket
         const sock = makeWASocket({
+            auth: state,
             logger: P({ level: 'silent' }),
             browser: ['Railway', 'Chrome', '1.0.0']
         })
 
+        // Save credentials
+        sock.ev.on('creds.update', saveCreds)
+
+        // Generate pairing code
         const code =
             await sock.requestPairingCode(phone)
 
