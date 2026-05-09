@@ -12,15 +12,15 @@ const bot = new TelegramBot(TOKEN, {
     polling: true
 })
 
-bot.onText(/\\/start/, async (msg) => {
+bot.onText(/\/start/, async (msg) => {
 
     bot.sendMessage(
         msg.chat.id,
-        'Send:\\n/pair 8801XXXXXXXXX'
+        'Send:\n/pair 8801XXXXXXXXX'
     )
 })
 
-bot.onText(/\\/pair (.+)/, async (msg, match) => {
+bot.onText(/\/pair (.+)/, async (msg, match) => {
 
     const chatId = msg.chat.id
 
@@ -43,14 +43,14 @@ bot.onText(/\\/pair (.+)/, async (msg, match) => {
 
         bot.sendMessage(
             chatId,
-            `🔗 Pairing Code:\\n\\n${code}`
+            `🔗 Pairing Code:\n\n${code}`
         )
 
     } catch (err) {
 
         bot.sendMessage(
             chatId,
-            `Error:\\n${err.message}`
+            `Error:\n${err.message}`
         )
     }
 })
