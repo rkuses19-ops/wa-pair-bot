@@ -3,8 +3,7 @@ const TelegramBot = require('node-telegram-bot-api')
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    DisconnectReason
+    fetchLatestBaileysVersion
 } = require('@whiskeysockets/baileys')
 
 const P = require('pino')
@@ -30,21 +29,24 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
 
     const phone = match[1]
 
-    bot.sendMessage(
+    await bot.sendMessage(
         chatId,
         'Generating pairing code...'
     )
 
     try {
 
+        // Latest WhatsApp version
         const { version } =
             await fetchLatestBaileysVersion()
 
+        // Session storage
         const { state, saveCreds } =
             await useMultiFileAuthState(
                 `sessions/${phone}`
             )
 
+        // Create WhatsApp socket
         const sock = makeWASocket({
 
             version,
@@ -74,11 +76,13 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
             keepAliveIntervalMs: 10000
         })
 
+        // Save session
         sock.ev.on(
             'creds.update',
             saveCreds
         )
 
+        // Connection updates
         sock.ev.on(
             'connection.update',
             async (update) => {
@@ -93,48 +97,58 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
                 if (connection === 'open') {
 
                     console.log(
-                        'WhatsApp Connected'
+                        '✅ PAIR SUCCESSFUL'
+                    )
+
+                    await bot.sendMessage(
+                        chatId,
+                        '✅ WhatsApp linked successfully!'
                     )
                 }
 
                 if (connection === 'close') {
 
-                    const reason =
-                        lastDisconnect?.error
-                            ?.output?.statusCode
+                    console.log(
+                        '❌ Connection Closed'
+                    )
 
                     console.log(
-                        'Connection Closed:',
-                        reason
+                        lastDisconnect
                     )
                 }
             }
         )
 
-        // wait before requesting pair code
+        // Wait before requesting code
         await new Promise(resolve =>
             setTimeout(resolve, 8000)
         )
 
+        // Generate pairing code
         const code =
             await sock.requestPairingCode(
                 phone
             )
 
-        bot.sendMessage(
+        await bot.sendMessage(
             chatId,
-            `🔗 Pairing Code:\n\n${code}`
+            `🔗 Pairing Code:\n\n${code}\n\nEnter this code in WhatsApp now.`
+        )
+
+        // KEEP CONNECTION ALIVE
+        await new Promise(resolve =>
+            setTimeout(resolve, 120000)
         )
 
     } catch (err) {
 
         console.log(err)
 
-        bot.sendMessage(
+        await bot.sendMessage(
             chatId,
             `Error:\n${err.message}`
         )
     }
 })
 
-console.log('Bot running...')
+console.log('🤖 Bot running...')
